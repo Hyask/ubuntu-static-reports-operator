@@ -428,12 +428,8 @@ class StaticReports:
                 logger.error("Failed to enable %s.timer: %s", service, e)
                 raise
         else:
-            logger.debug("Enabling %s.service (no timer; triggered via OnSuccess)", service)
-            try:
-                systemd.service_enable(f"{service}.service")
-            except CalledProcessError as e:
-                logger.error("Failed to enable %s.service: %s", service, e)
-                raise
+            logger.debug("Not enabling %s.service (triggered via OnSuccess)", service)
+
         logger.debug("Systemd unit %s enabled and started", service)
 
     def _unit_is_disabled(self, unit_name: str) -> bool:
