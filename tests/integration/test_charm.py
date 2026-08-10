@@ -181,14 +181,14 @@ def test_all_timers_are_active(juju: jubilant.Juju):
         assert state == "active", f"{timer}.timer is not active"
 
 
-def test_oncomplete_services_are_enabled(juju: jubilant.Juju):
-    """Services triggered via OnSuccess= are installed and enabled after deploy."""
+def test_onsuccess_services_are_enabled(juju: jubilant.Juju):
+    """Services triggered via OnSuccess= are installed but stay static (not enabled)."""
     services = ["update-germinate", "update-mismatches", "update-nbs"]
     for service in services:
         state = juju.ssh(
             "ubuntu-static-reports/0", f"systemctl is-enabled {service}.service"
         ).strip()
-        assert state == "enabled", f"{service}.service is not enabled"
+        assert state == "static", f"{service}.service is not static"
 
 
 def test_mismatches_path_is_served(juju: jubilant.Juju):
