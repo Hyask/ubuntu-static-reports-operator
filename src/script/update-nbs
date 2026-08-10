@@ -262,26 +262,33 @@ def _nbs_report(cfg: Config, archive_base: Path, workdir: Path) -> None:
     """Render the checkrdepends work directory into out/nbs.html + out/nbs.csv."""
     html = cfg.out / "nbs.html"
     csv = cfg.out / "nbs.csv"
-    tmp_html = cfg.out / ".nbs.html.new"
-    tmp_csv = cfg.out / ".nbs.csv.new"
-    with open(tmp_html, "w", encoding="utf-8") as handle:
-        _run(
-            [
-                str(cfg.uat / "nbs-report"),
-                "-B",
-                str(archive_base),
-                "-d",
-                cfg.distribution,
-                "-s",
-                cfg.devel,
-                "--csv-file",
-                str(tmp_csv),
-                str(workdir) + os.sep,
-            ],
-            stdout=handle,
-        )
-    os.replace(tmp_html, html)
-    os.replace(tmp_csv, csv)
+
+    # Prepare files in a temporary dir for atomic updates.
+    with tempfile.TemporaryDirectory(dir=cfg.out) as staging:
+        tmp_html = Path(staging) / "nbs.html"
+        tmp_csv = Path(staging) / "nbs.csv"
+
+        if csv.exists():
+            shutil.copy2(csv, tmp_csv)
+
+        with open(tmp_html, "w", encoding="utf-8") as handle:
+            _run(
+                [
+                    str(cfg.uat / "nbs-report"),
+                    "-B",
+                    str(archive_base),
+                    "-d",
+                    cfg.distribution,
+                    "-s",
+                    cfg.devel,
+                    "--csv-file",
+                    str(tmp_csv),
+                    str(workdir) + os.sep,
+                ],
+                stdout=handle,
+            )
+        os.replace(tmp_csv, csv)
+        os.replace(tmp_html, html)
 
 
 def generate_report(cfg: Config) -> int:
