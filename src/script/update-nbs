@@ -43,7 +43,7 @@ HOME = Path(os.environ.get("HOME", "/home/ubuntu"))
 # archive-cruft-check emits its candidate NBS binaries as indented "o" lines:
 #     o 1.2-3: libfoo1, libfoo-bin
 # Take everything after the version colon and split on binary names.
-NBS_LINE_RE = re.compile(r"^\s*o\s+.*?:\s*(.+)$")
+NBS_LINE_RE = re.compile(r"^\s*o\s+.*:\s*(.+)$")
 
 # upstream fix: https://code.launchpad.net/~lvoytek/ubuntu-archive-tools/+git/ubuntu-archive-tools/+merge/508941
 # checkrdepends and nbs-report iterate over these architectures for the devel
