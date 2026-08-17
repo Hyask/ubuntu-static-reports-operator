@@ -37,7 +37,7 @@ pydantic==2.13.4
     # via ubuntu-static-reports-operator (pyproject.toml)
 pydantic-core==2.48.0
     # via pydantic
-pygments==2.20.0
+pygments==2.21.0
     # via pytest
 pytest==9.1.1
     # via ubuntu-static-reports-operator (pyproject.toml)
