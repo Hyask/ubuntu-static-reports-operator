@@ -118,17 +118,21 @@ def _previous_seeds_mtime(current: Path) -> float:
 
 def run_germinate(staging: Path, seed_source: str) -> None:
     """Germinate against the frozen archive copy in staging/ubuntu/."""
-    _run(
-        [
-            "germinate-ubuntu",
-            "-o",
-            str(staging / "germinate-release"),
-            "--archiveroot",
-            f"file://{staging / 'ubuntu'}",
-            "-S",
-            seed_source,
-        ],
-    )
+    output = staging / "germinate"
+    for pocket in ("release", "proposed"):
+        _run(
+            [
+                "germinate-ubuntu",
+                "-o",
+                str(output),
+                "--pocket",
+                pocket,
+                "--archiveroot",
+                f"file://{staging / 'ubuntu'}",
+                "-S",
+                seed_source,
+            ],
+        )
 
 
 def _write_stamp(snapshot: Path, archive_snapshot_name: str, seeds_mt: float) -> None:

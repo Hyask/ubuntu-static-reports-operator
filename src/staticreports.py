@@ -77,6 +77,9 @@ MISMATCHES_ENV_PATH = "/etc/staticreports/mismatches.env"
 
 # germinate's real (hardlink-friendly) storage lives under mirror_dir, next to
 # the archive snapshots; this is the stable web path symlinked to its `current`.
+# The snapshot's germinate/ dir serves the <flavour>/<series>/<pocket>/ tree
+# (with a legacy flat hardlink view of each pocket in its root and in
+# germinate-proposed/ for component-mismatches et al.).
 GERMINATE_WEB_PATH = Path("/srv/staticreports/www/germinate")
 DEFAULT_MIRROR_DIR = "/var/cache/mirror/ubuntu"
 

@@ -156,8 +156,8 @@ def generate_reports(cfg: Config) -> int:
     # Expose this snapshot through the paths the hard-coded tools read, so every
     # report works against one consistent archive + germinate state.
     _relink(cfg.mirror, snapshot / "ubuntu")
-    _relink(cfg.germinate_dir, snapshot / "germinate-release")
-    _relink(cfg.germinate_proposed, snapshot / "germinate-proposed")
+    _relink(cfg.germinate_dir, snapshot / "germinate")
+    _relink(cfg.germinate_proposed, snapshot / "germinate" / "germinate-proposed")
 
     _stub_missing_archive_arches(cfg.mirror)
     _stub_missing_germinate_arches(cfg.germinate_dir)
