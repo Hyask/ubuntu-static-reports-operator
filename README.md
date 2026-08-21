@@ -91,6 +91,11 @@ from various sources depending on the respective service.
   * Data: Current archive indices (from update-archive-mirror) and seeds (from update-seeds)
   * Old location: https://ubuntu-archive-team.ubuntu.com/germinate-output/
   * New location: https://static-reports.ubuntu.com/germinate/
+  * Published views (hardlinked, so one set of data with several layouts):
+    * `germinate/flavours/<flavour>/<series>/<pocket>/` — the canonical per-flavour/series/pocket tree
+    * `germinate/flat/<pocket>/` — every flavour's files for one pocket in a single directory, consumed by the mismatch reports
+    * `germinate/germinate-output/release/<flavour>.<series>/` — the old archive-team site layout with legacy filenames; `/germinate-output/<flavour>.<series>/<file>` redirects here file-for-file
+    * `germinate/archive/ubuntu/` and `germinate/STAMP` — the hardlinked archive indices and provenance stamp
 
 * update-mismatches
   * TL;DR: Generate the archive override mismatch reports (architecture, component, pocket, priority)

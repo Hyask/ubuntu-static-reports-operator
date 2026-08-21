@@ -9,8 +9,11 @@ this script twice, once per pocket, into the same output root).
 Output is laid out per flavour/series/pocket as
 ``<flavour>/<series>/<pocket>/<seed>_<flavour>_<series>_<arch>``; the
 ``<seed>_<flavour>_<series>_<arch>`` file naming that component-mismatches
-and other archive-admin tools expect is preserved.  A flat hardlink view of
-all data files is left in the output root itself for those legacy consumers.
+and other archive-admin tools expect is preserved.  Hardlink views for the
+legacy consumers (a flat per-pocket view, and a ``germinate-output/`` view
+replicating the old archive-team site) are built by update-germinate, which
+invokes this script for both pockets into one output root and owns the
+published layout.
 
 Based on lib/lp/archivepublisher/scripts/generate_extra_overrides.py from
 Launchpad, which is:
@@ -33,7 +36,7 @@ from pathlib import Path
 from germinate.archive import TagFile
 from germinate.germinator import Germinator
 from germinate.log import GerminateFormatter
-from germinate.seeds import SeedError, SeedStructure
+from germinate.seeds import Seed, SeedError, SeedStructure
 
 COMPONENTS = ["main", "restricted", "universe", "multiverse"]
 
@@ -59,7 +62,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "-o",
         "--output",
         default="germinate",
-        help="Output root for the <flavour>/<series>/<pocket>/ tree (a legacy flat hardlink view is built in the root itself).",
+        help="Output root for the <flavour>/<series>/<pocket>/ tree.",
     )
     parser.add_argument(
         "--archiveroot",
@@ -131,25 +134,6 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         germinate_logger.removeHandler(handler)
         handler.close()
-
-    # Legacy consumers (component-mismatches et al.) expect every flavour's
-    # files for one pocket in a single flat directory; provide that as a
-    # hardlink view (release at the output root, proposed under
-    # germinate-proposed/) so it is published and pruned together with the
-    # tree by update-germinate's snapshot handling.
-    flat = Path(outdir) if pocket == "release" else Path(outdir) / "germinate-proposed"
-    flat.mkdir(exist_ok=True)
-    # Drop this pocket's previous flat view (and any leftovers from when the
-    # script wrote a single flat directory) before rebuilding it.  Only this
-    # pocket's view dir is touched: the release and proposed runs share the
-    # output root, so the proposed run must not wipe the release view.
-    for stale in flat.glob("*_*_*_*"):
-        if stale.is_file() and not stale.is_symlink():
-            stale.unlink()
-    for tree_file in Path(outdir).glob(f"*/*/{pocket}/*"):
-        dest = flat / tree_file.name
-        if not dest.exists():
-            os.link(tree_file, dest)
 
     return 0
 
@@ -263,18 +247,38 @@ def _write_germinate_output(
         seed_outputs.add(p.name)
         return str(p)
 
-    structure.write(path("structure"))
     germinator.write_all_list(structure, path("all"))
     germinator.write_all_source_list(structure, path("all.sources"))
-    for seedname in structure.names:
+    germinator.write_all_snap_list(structure, path("all.snaps"))
+    germinator.write_all_extra_list(structure, path("all+extra"))
+    germinator.write_all_extra_source_list(structure, path("all+extra.sources"))
+    germinator.write_supported_list(structure, path(f"{structure.supported}+build-depends"))
+    germinator.write_supported_source_list(
+        structure, path(f"{structure.supported}+build-depends.sources")
+    )
+    germinator.write_provides_list(structure, path("provides"))
+    structure.write(path("structure"))
+    structure.write_dot(path("structure.dot"))
+    germinator.write_blacklisted(structure, path("blacklisted"))
+    # The old CLI writes an "extra" pseudo-seed alongside the real seeds; it
+    # has no seed text or source list of its own.
+    for seedname in [*structure.names, "extra"]:
         germinator.write_full_list(structure, path(seedname), seedname)
-        germinator.write_sources_list(structure, path(f"{seedname}.sources"), seedname)
-
-    # i386 is germinated with build-deps followed; supported+build-depends
-    # then covers the whole reachable set, matching the old i386.* layout.
-    if flavour == "i386":
-        germinator.write_supported_list(structure, path("i386+build-depends"))
-        germinator.write_supported_source_list(structure, path("i386+build-depends.sources"))
+        germinator.write_seed_list(structure, path(f"{seedname}.seed"), seedname)
+        germinator.write_seed_recommends_list(
+            structure, path(f"{seedname}.seed-recommends"), seedname
+        )
+        germinator.write_depends_list(structure, path(f"{seedname}.depends"), seedname)
+        germinator.write_build_depends_list(
+            structure, path(f"{seedname}.build-depends"), seedname
+        )
+        germinator.write_build_sources_list(
+            structure, path(f"{seedname}.build-sources"), seedname
+        )
+        germinator.write_snap_list(structure, path(f"{seedname}.snaps"), seedname)
+        if seedname != "extra" and seedname in structure:
+            structure.write_seed_text(path(f"{seedname}.seedtext"), seedname)
+            germinator.write_sources_list(structure, path(f"{seedname}.sources"), seedname)
 
 
 def _germinate_arch(
@@ -287,6 +291,7 @@ def _germinate_arch(
     outdir: str,
     suites: list[str],
     pocket: str,
+    seed_bases: list[str] | None,
 ) -> set[str]:
     """Germinate all flavours for one architecture. Runs in a forked child."""
     glog = logging.getLogger("germinate")
@@ -302,12 +307,21 @@ def _germinate_arch(
         glog.info("", extra={"progress": True})
         glog.info("Germinating for %s/%s/%s", flavour, suite, arch, extra={"progress": True})
 
-        germinator.plant_seeds(structures[flavour])
-        germinator.grow(structures[flavour])
-        germinator.add_extras(structures[flavour])
-        if flavour == "i386":
-            # TODO: replace with a public Germinator API once germinate grows one.
-            germinator._always_follow_build_depends = True
+        structure = structures[flavour]
+        germinator.plant_seeds(structure)
+        if seed_bases:
+            series = suite.split("-")[0]
+            try:
+                with Seed(seed_bases, f"{flavour}.{series}", "blacklist") as blacklist:
+                    germinator.parse_blacklist(structure, blacklist)
+            except SeedError:
+                pass
+        germinator.grow(structure)
+        germinator.add_extras(structure)
+        # Match the old germinate CLI: follow build-depends globally so the
+        # <supported>+build-depends output covers the reachable set.
+        # TODO: replace with a public Germinator API once germinate grows one.
+        germinator._always_follow_build_depends = True
         _write_germinate_output(
             germinator, structures[flavour], outdir, flavour, suite, arch, seed_outputs, pocket
         )
@@ -380,6 +394,7 @@ def germinate_suite(
                     outdir,
                     suites,
                     pocket,
+                    seed_bases,
                 )
             )
         else:
