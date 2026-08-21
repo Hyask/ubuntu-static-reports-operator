@@ -7,11 +7,28 @@ germinate-ubuntu against it, and publishes the combined result
 <out>/current/. Consumers of the combined snapshot (update-mismatches) read
 from <out>/current/.
 
+Each snapshot lays the germinate tree and its two hardlink views out at its
+root, next to the hardlinked archive indices:
+
+  archive/ubuntu/                      hardlinked archive indices
+  flavours/<flavour>/<series>/<pocket>/
+                                       canonical germinate tree
+  flat/<pocket>/                       every flavour's files for one pocket
+                                       in a single directory, for
+                                       component-mismatches et al.
+  germinate-output/release/<flavour>.<series>/
+                                       the old archive-team site layout
+                                       (legacy filenames, plus the
+                                       _germinate_output log), so the old
+                                       /germinate-output/ URLs can be
+                                       redirected here file-for-file.
+  STAMP
+
 <out> lives under mirror_dir, next to the archive snapshots produced by
 update-archive-mirror, so the two stay on the same filesystem and this script
 can cheaply hardlink the archive indices instead of copying them. The charm
 keeps a symlink at /srv/staticreports/www/germinate pointing at <out>/current
-so nginx serves it under /germinate/ without duplicating the storage.
+so nginx serves all of it under /germinate/ without duplicating the storage.
 
 A rebuild only happens when the archive snapshot or the local seeds have
 changed since the last run.  Triggered by update-archive-mirror via systemd
@@ -117,8 +134,8 @@ def _previous_seeds_mtime(current: Path) -> float:
 
 
 def run_germinate(staging: Path, seed_source: str) -> None:
-    """Germinate against the frozen archive copy in staging/ubuntu/."""
-    output = staging / "germinate"
+    """Germinate against the frozen archive copy in staging/archive/ubuntu/."""
+    output = staging / "flavours"
     for pocket in ("release", "proposed"):
         _run(
             [
@@ -128,11 +145,45 @@ def run_germinate(staging: Path, seed_source: str) -> None:
                 "--pocket",
                 pocket,
                 "--archiveroot",
-                f"file://{staging / 'ubuntu'}",
+                f"file://{staging / 'archive' / 'ubuntu'}",
                 "-S",
                 seed_source,
             ],
         )
+
+
+def _hardlink(target: Path, link_name: Path) -> None:
+    """Link target to link_name; no-op on a re-run, raise on a conflicting dest."""
+    try:
+        os.link(target, link_name, follow_symlinks=False)
+    except FileExistsError:
+        if not link_name.is_symlink() and link_name.samefile(target):
+            return
+        raise FileExistsError(f"conflicting file already at {link_name}")
+
+
+def _build_views(staging: Path) -> None:
+    """Hardlink the flat/ and germinate-output/ views from the flavours/ tree."""
+    flavours = staging / "flavours"
+    for pocket in ("release", "proposed"):
+        for tree_file in flavours.glob(f"*/*/{pocket}/*"):
+            if not tree_file.is_file() or tree_file.is_symlink():
+                continue
+            dest_dir = staging / "flat" / pocket
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            _hardlink(tree_file, dest_dir / tree_file.name)
+
+    for series_dir in flavours.glob("*/*/release"):
+        flavour, series = series_dir.parent.parent.name, series_dir.parent.name
+        legacy_arch = "i386" if flavour == "i386" else "amd64"
+        legacy_dir = staging / "germinate-output" / "release" / f"{flavour}.{series}"
+        legacy_dir.mkdir(parents=True, exist_ok=True)
+        for entry in series_dir.iterdir():
+            suffix = f"_{flavour}_{series}_{legacy_arch}"
+            if entry.is_file() and entry.name.endswith(suffix):
+                _hardlink(entry, legacy_dir / entry.name[: -len(suffix)])
+        # The old site also exposes the germinate log as _germinate_output.
+        _hardlink(flavours / "germinate.output", legacy_dir / "_germinate_output")
 
 
 def _write_stamp(snapshot: Path, archive_snapshot_name: str, seeds_mt: float) -> None:
@@ -216,10 +267,12 @@ def germinate_and_publish(
 
     # Hardlink the archive indices from the current archive snapshot so a
     # later archive-sync run cannot mutate the staged germinate tree.
-    _run(["cp", "-al", str(current_archive / "ubuntu"), str(staging / "ubuntu")])
+    (staging / "archive").mkdir()
+    _run(["cp", "-al", str(current_archive / "ubuntu"), str(staging / "archive" / "ubuntu")])
 
     try:
         run_germinate(staging, seed_source)
+        _build_views(staging)
     except subprocess.CalledProcessError:
         logger.error("germinate-ubuntu failed; keeping the previous snapshot.")
         shutil.rmtree(staging, ignore_errors=True)

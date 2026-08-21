@@ -154,10 +154,12 @@ def generate_reports(cfg: Config) -> int:
     logger.info("Development series: %s", cfg.devel)
 
     # Expose this snapshot through the paths the hard-coded tools read, so every
-    # report works against one consistent archive + germinate state.
-    _relink(cfg.mirror, snapshot / "ubuntu")
-    _relink(cfg.germinate_dir, snapshot / "germinate")
-    _relink(cfg.germinate_proposed, snapshot / "germinate" / "germinate-proposed")
+    # report works against one consistent archive + germinate state. The tools
+    # expect every flavour's files for one pocket in a single flat directory;
+    # the snapshot's flat/ hardlink views provide exactly that.
+    _relink(cfg.mirror, snapshot / "archive" / "ubuntu")
+    _relink(cfg.germinate_dir, snapshot / "flat" / "release")
+    _relink(cfg.germinate_proposed, snapshot / "flat" / "proposed")
 
     _stub_missing_archive_arches(cfg.mirror)
     _stub_missing_germinate_arches(cfg.germinate_dir)
