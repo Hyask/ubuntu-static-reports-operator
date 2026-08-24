@@ -13,6 +13,7 @@ from typing import cast
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import ops
+import ops.testing
 import pytest
 from charmlibs.apt import PackageError, PackageNotFoundError
 from ops.testing import (
