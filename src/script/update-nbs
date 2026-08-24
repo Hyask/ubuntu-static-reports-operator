@@ -99,7 +99,7 @@ def _parse_args(argv=None) -> argparse.Namespace:
         default=Path("/srv/staticreports/www/nbs"),
         help="Directory to write the report into.",
     )
-    mirror_dir = Path(os.environ.get("MIRROR_DIR", "/var/cache/mirror/ubuntu"))
+    mirror_dir = Path(os.environ.get("MIRROR_DIR", "/srv/staticreports"))
     parser.add_argument(
         "--archive-root",
         type=Path,

@@ -32,6 +32,13 @@ parts:
       git describe --always > $CRAFT_PART_INSTALL/version
       chmod +x "$CRAFT_PART_INSTALL"/src/script/*
 
+storage:
+  # Some data sets e.g. germinate can be quite large
+  staticreports:
+    description: data sets of the static reports
+    type: filesystem
+    location: /srv/staticreports/
+
 charm-libs:
   - lib: operator_libs_linux.systemd
     version: "1"
@@ -71,9 +78,7 @@ config:
         their snapshots: <mirror_dir>/archive/ holds the archive-index
         snapshots, <mirror_dir>/germinate/ the combined archive+germinate
         ones, each with a `current` symlink atomically updated to the latest
-        snapshot. Kept outside the web root so both stay on one filesystem
-        (needed for cheap hardlinking between them); germinate's `current` is
-        exposed at /germinate/ via a symlink the charm maintains. Defaults to
-        /var/cache/mirror/ubuntu.
+        snapshot. This maps to the storage defined for slot staticreports.
+        Defaults to /srv/staticreports/.
       type: string
-      default: "/var/cache/mirror/ubuntu"
+      default: "/srv/staticreports/"

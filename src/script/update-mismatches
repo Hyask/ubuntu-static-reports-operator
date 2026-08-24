@@ -207,7 +207,7 @@ def _parse_args(argv=None) -> argparse.Namespace:
     parser.add_argument(
         "--archive-root",
         type=Path,
-        default=Path(os.environ.get("ARCHIVE_ROOT", "/var/cache/mirror/ubuntu/germinate/current")),
+        default=Path(os.environ.get("ARCHIVE_ROOT", "/srv/staticreports/germinate/current")),
         help="Path to the update-germinate snapshot pointer to read.",
     )
     return parser.parse_args(argv)

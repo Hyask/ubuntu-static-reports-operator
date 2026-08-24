@@ -81,7 +81,7 @@ MISMATCHES_ENV_PATH = "/etc/staticreports/mismatches.env"
 # tree, the flat/<pocket>/ and germinate-output/release/<flavour>.<series>/
 # hardlink views built by update-germinate, and the archive/ indices + STAMP.
 GERMINATE_WEB_PATH = Path("/srv/staticreports/www/germinate")
-DEFAULT_MIRROR_DIR = "/var/cache/mirror/ubuntu"
+DEFAULT_MIRROR_DIR = "/srv/staticreports"
 
 
 def _relink(link: Path, target: str) -> None:

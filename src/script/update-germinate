@@ -64,7 +64,7 @@ def parse_args(argv=None) -> argparse.Namespace:
         action="store_true",
         help="Rebuild and publish even if no inputs changed.",
     )
-    mirror_dir = Path(os.environ.get("MIRROR_DIR", "/var/cache/mirror/ubuntu"))
+    mirror_dir = Path(os.environ.get("MIRROR_DIR", "/srv/staticreports"))
     parser.add_argument(
         "--archive",
         type=Path,

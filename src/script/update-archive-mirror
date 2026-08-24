@@ -45,7 +45,7 @@ def parse_args(argv=None) -> argparse.Namespace:
     parser.add_argument(
         "--out",
         type=Path,
-        default=Path(os.environ.get("MIRROR_DIR", "/var/cache/mirror/ubuntu")) / "archive",
+        default=Path(os.environ.get("MIRROR_DIR", "/srv/staticreports")) / "archive",
         help="Directory to publish archive snapshots into (holds the 'current' symlink).",
     )
     parser.add_argument(
