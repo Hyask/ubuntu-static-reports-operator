@@ -78,7 +78,8 @@ config:
         their snapshots: <mirror_dir>/archive/ holds the archive-index
         snapshots, <mirror_dir>/germinate/ the combined archive+germinate
         ones, each with a `current` symlink atomically updated to the latest
-        snapshot. This maps to the storage defined for slot staticreports.
-        Defaults to /srv/staticreports/.
+        snapshot. Kept on one filesystem so update-germinate can cheaply
+        hardlink the archive indices. By default this maps to the storage
+        named staticreports.
       type: string
-      default: "/srv/staticreports/"
+      default: "/srv/staticreports"
