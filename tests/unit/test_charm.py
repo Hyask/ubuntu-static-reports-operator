@@ -172,6 +172,17 @@ def test_config_changed_event_writes_mismatches_overrides_from_config(
     mock_configure_mismatches.assert_called_once_with(mirror_dir="/srv/mirror")
 
 
+@patch("charm.StaticReports.setup_storage")
+def test_storage_attached_event_creates_report_directories(setup_storage_mock, ctx):
+    """storage-attached (re)creates the report tree on the mounted volume."""
+    storage = ops.testing.Storage("staticreports")
+    state = State(leader=True, storages={storage})
+
+    ctx.run(ctx.on.storage_attached(storage), state)
+
+    setup_storage_mock.assert_called_once()
+
+
 @patch(
     "charm.UbuntuStaticReportsCharm._lpuser_lp_oauthkey",
     new_callable=PropertyMock,

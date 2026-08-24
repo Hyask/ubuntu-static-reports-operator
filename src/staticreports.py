@@ -176,15 +176,13 @@ class StaticReports:
             logger.error("Failed to update %s: %s", UNATTENDED_UPGRADES_CONFIG_PATH, e)
             raise
 
-    def install(self):
-        """Set up the environment required for the static reports."""
-        logger.info("Install required deb packages")
-        self._install_packages()
+    def setup_storage(self):
+        """Create the report directory tree with ubuntu ownership.
 
-        logger.info("Install 1/5 Configuring automatic security and stable updates")
-        self._configure_unattended_upgrades()
-
-        logger.info("Install 2/5 Create the required directories")
+        Idempotent; also called on storage-attached so a mounted volume does
+        not shadow this tree and leave the User=ubuntu services unable to
+        write their reports.
+        """
         for dir_path, dir_user, dir_group in SRV_DIRS:
             try:
                 os.makedirs(dir_path, exist_ok=True)
@@ -195,6 +193,17 @@ class StaticReports:
             except OSError as e:
                 logger.warning("Creating directory %s failed: %s", dir_path, e)
                 raise
+
+    def install(self):
+        """Set up the environment required for the static reports."""
+        logger.info("Install required deb packages")
+        self._install_packages()
+
+        logger.info("Install 1/5 Configuring automatic security and stable updates")
+        self._configure_unattended_upgrades()
+
+        logger.info("Install 2/5 Create the required directories")
+        self.setup_storage()
 
         logger.info("Install 3/5 Updating repositories")
         for repo_url, repo_branch, repo_target in REPO_URLS:

@@ -33,6 +33,7 @@ class UbuntuStaticReportsCharm(ops.CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.refresh_action, self._on_refresh_report)
+        self.framework.observe(self.on.staticreports_storage_attached, self._on_storage_attached)
 
         framework.observe(self.ingress.on.ready, self._on_config_changed)
         framework.observe(self.ingress.on.revoked, self._on_config_changed)
@@ -90,6 +91,10 @@ class UbuntuStaticReportsCharm(ops.CharmBase):
             )
             return
         self.unit.status = ops.ActiveStatus()
+
+    def _on_storage_attached(self, event: ops.StorageAttachedEvent):
+        """(Re)create the report tree on the freshly attached storage volume."""
+        self._staticreports.setup_storage()
 
     def _on_start(self, event: ops.StartEvent):
         """Start the services of the static reports."""
