@@ -399,6 +399,38 @@ def test_install_raises_when_directory_creation_fails(monkeypatch):
         sr.install()
 
 
+def test_setup_storage_creates_srv_directories_with_ownership(monkeypatch):
+    made = []
+    chowned = []
+    monkeypatch.setattr(
+        staticreports.os,
+        "makedirs",
+        lambda dir_path, exist_ok=True: made.append(dir_path),
+    )
+    monkeypatch.setattr(
+        staticreports.shutil, "chown", lambda path, u, g: chowned.append((path, u, g))
+    )
+    sr = staticreports.StaticReports()
+
+    sr.setup_storage()
+
+    for dir_path, dir_user, dir_group in staticreports.SRV_DIRS:
+        assert dir_path in made
+        if dir_user is not None:
+            assert (dir_path, dir_user, dir_group) in chowned
+
+
+def test_setup_storage_raises_when_directory_creation_fails(monkeypatch):
+    def boom(dir_path, exist_ok=True):
+        raise OSError("no space")
+
+    monkeypatch.setattr(staticreports.os, "makedirs", boom)
+    sr = staticreports.StaticReports()
+
+    with pytest.raises(OSError):
+        sr.setup_storage()
+
+
 def test_configure_url_logs_configured_url(caplog):
     sr = staticreports.StaticReports()
     caplog.clear()

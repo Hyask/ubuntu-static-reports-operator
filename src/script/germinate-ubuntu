@@ -50,13 +50,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--pocket",
         choices=["release", "proposed"],
         default="release",
-        help="Pocket to germinate; 'proposed' uses the full ogre stack and only the development series.",
+        help=(
+            "Pocket to germinate; 'proposed' uses the full ogre stack and "
+            "only the development series."
+        ),
     )
     parser.add_argument(
         "-s",
         "--series",
         metavar="SERIES",
-        help="Only germinate this series (default: all series in the archive, or the development series for --pocket proposed).",
+        help=(
+            "Only germinate this series (default: all series in the archive, "
+            "or the development series for --pocket proposed)."
+        ),
     )
     parser.add_argument(
         "-o",
@@ -269,12 +275,8 @@ def _write_germinate_output(
             structure, path(f"{seedname}.seed-recommends"), seedname
         )
         germinator.write_depends_list(structure, path(f"{seedname}.depends"), seedname)
-        germinator.write_build_depends_list(
-            structure, path(f"{seedname}.build-depends"), seedname
-        )
-        germinator.write_build_sources_list(
-            structure, path(f"{seedname}.build-sources"), seedname
-        )
+        germinator.write_build_depends_list(structure, path(f"{seedname}.build-depends"), seedname)
+        germinator.write_build_sources_list(structure, path(f"{seedname}.build-sources"), seedname)
         germinator.write_snap_list(structure, path(f"{seedname}.snaps"), seedname)
         if seedname != "extra" and seedname in structure:
             structure.write_seed_text(path(f"{seedname}.seedtext"), seedname)
@@ -285,7 +287,6 @@ def _germinate_arch(
     suite: str,
     components: list[str],
     arch: str,
-    flavours: list[str],
     structures: dict[str, SeedStructure],
     archiveroot: str,
     outdir: str,
@@ -300,14 +301,13 @@ def _germinate_arch(
     germinator.parse_archive(archive)
 
     seed_outputs: set[str] = set()
-    for flavour in flavours:
+    for flavour, structure in structures.items():
         if flavour == "i386" and arch != "i386":
             continue
         logging.info("Germinating for %s/%s/%s", flavour, suite, arch)
         glog.info("", extra={"progress": True})
         glog.info("Germinating for %s/%s/%s", flavour, suite, arch, extra={"progress": True})
 
-        structure = structures[flavour]
         germinator.plant_seeds(structure)
         if seed_bases:
             series = suite.split("-")[0]
@@ -323,7 +323,7 @@ def _germinate_arch(
         # TODO: replace with a public Germinator API once germinate grows one.
         germinator._always_follow_build_depends = True
         _write_germinate_output(
-            germinator, structures[flavour], outdir, flavour, suite, arch, seed_outputs, pocket
+            germinator, structure, outdir, flavour, suite, arch, seed_outputs, pocket
         )
 
     return seed_outputs
@@ -388,7 +388,6 @@ def germinate_suite(
                     suite,
                     COMPONENTS,
                     arch,
-                    flavours,
                     structures,
                     archiveroot,
                     outdir,
